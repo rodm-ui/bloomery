@@ -1,58 +1,40 @@
-import express from "express";
-import mysql from "mysql2/promise";
-import path from "path";
-import { fileURLToPath } from "url";
+import express from 'express';
+import mysql from 'mysql2/promise';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
-// Database pool
-const pool = mysql.createPool({
-  host: process.env.MYSQL_HOST,
-  user: process.env.MYSQL_USER,
-  password: process.env.MYSQL_PASSWORD,
-  database: process.env.MYSQL_DATABASE,
-  port: Number(process.env.MYSQL_PORT) || 3306,
-  ssl: {
-    rejectUnauthorized: false
-  },
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
+// MySQL Connection Pool
+const db = mysql.createPool({
+  host: 'localhost',
+  user: 'root',
+  password: 'password',
+  database: 'test_db',
 });
 
-// Database test route only
-app.get("/api/db-test", async (req, res) => {
+// API Routes
+app.get('/api/data', async (req, res) => {
   try {
-    const [rows] = await pool.query("SELECT NOW() AS now");
-    res.json({
-      success: true,
-      message: "Database connected successfully",
-      time: rows[0].now
-    });
-  } catch (err) {
-    console.error("Database query failed:", err);
-    res.status(500).json({
-      success: false,
-      error: err.message
-    });
+    // const [rows] = await db.query('SELECT * FROM users');
+    res.json({ message: "Hello from the Express backend!", data: [] });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Serve React/Vite website
-app.use(express.static(path.join(__dirname, "dist")));
-
-// React fallback route
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "dist", "index.html"));
-});
-
-const PORT = process.env.PORT || 3000;
+// Serve Vite build preview in production
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, 'dist')));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+  });
+}
 
 app.listen(PORT, () => {
-  console.log("Server running on port " + PORT);
+  console.log(`Server running at http://localhost:${PORT}`);
 });
