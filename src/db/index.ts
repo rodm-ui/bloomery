@@ -3,21 +3,19 @@ import { Pool } from "pg";
 
 const databaseUrl = process.env.DATABASE_URL;
 
-if (!databaseUrl) {
-  throw new Error("DATABASE_URL is required");
-}
 const globalForDb = globalThis as typeof globalThis & {
   __arenaNextJsPostgresqlPool?: Pool;
 };
 
-export const pool =
-  globalForDb.__arenaNextJsPostgresqlPool ??
-  new Pool({
-    connectionString: databaseUrl,
-  });
+// only create pool if DATABASE_URL exists
+export const pool = databaseUrl
+  ? globalForDb.__arenaNextJsPostgresqlPool ?? new Pool({ connectionString: databaseUrl })
+  : undefined;
 
-if (process.env.NODE_ENV !== "production") {
+// save global pool in dev
+if (databaseUrl && process.env.NODE_ENV !== "production") {
   globalForDb.__arenaNextJsPostgresqlPool = pool;
 }
 
-export const db = drizzle(pool);
+// export drizzle instance only if pool exists
+export const db = pool ? drizzle(pool) : undefined;
