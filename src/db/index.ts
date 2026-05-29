@@ -7,6 +7,11 @@ const globalForDb = globalThis as typeof globalThis & {
   __arenaNextJsPostgresqlPool?: Pool;
 };
 
+// log a warning instead of throwing
+if (!databaseUrl) {
+  console.warn("DATABASE_URL is missing. Database operations will be disabled.");
+}
+
 // only create pool if DATABASE_URL exists
 export const pool = databaseUrl
   ? globalForDb.__arenaNextJsPostgresqlPool ?? new Pool({ connectionString: databaseUrl })
