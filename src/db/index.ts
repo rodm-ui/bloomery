@@ -1,26 +1,40 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-import { Pool } from "pg";
+// ---------- MySQL setup ----------
+import { drizzle as drizzleMysql } from "drizzle-orm/mysql2";
+import mysql from "mysql2/promise";
+
+export const mysqlPool = mysql.createPool({
+  host: process.env.MYSQL_HOST,
+  user: process.env.MYSQL_USER,
+  password: process.env.MYSQL_PASSWORD,
+  database: process.env.MYSQL_DATABASE,
+  port: Number(process.env.MYSQL_PORT || 3306),
+  ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : undefined,
+  waitForConnections: true,
+  connectionLimit: 10,
+});
+
+export const mysqlDb = drizzleMysql(mysqlPool);
+
+// ---------- PostgreSQL setup ----------
+import { drizzle as drizzlePg } from "drizzle-orm/node-postgres";
+import { Pool as PgPool } from "pg";
 
 const databaseUrl = process.env.DATABASE_URL;
 
 const globalForDb = globalThis as typeof globalThis & {
-  __arenaNextJsPostgresqlPool?: Pool;
+  __arenaNextJsPostgresqlPool?: PgPool;
 };
 
-// log a warning instead of throwing
 if (!databaseUrl) {
-  console.warn("DATABASE_URL is missing. Database operations will be disabled.");
+  console.warn("DATABASE_URL is missing. PostgreSQL operations will be disabled.");
 }
 
-// only create pool if DATABASE_URL exists
-export const pool = databaseUrl
-  ? globalForDb.__arenaNextJsPostgresqlPool ?? new Pool({ connectionString: databaseUrl })
+export const pgPool = databaseUrl
+  ? globalForDb.__arenaNextJsPostgresqlPool ?? new PgPool({ connectionString: databaseUrl })
   : undefined;
 
-// save global pool in dev
-if (databaseUrl && process.env.NODE_ENV !== "production") {
-  globalForDb.__arenaNextJsPostgresqlPool = pool;
+if (pgPool && process.env.NODE_ENV !== "production") {
+  globalForDb.__arenaNextJsPostgresqlPool = pgPool;
 }
 
-// export drizzle instance only if pool exists
-export const db = pool ? drizzle(pool) : undefined;
+export const pgDb = pgPool ? drizzlePg(pgPool) : undefined;
