@@ -17,33 +17,37 @@ const db = mysql.createPool({
   host: process.env.MYSQL_HOST || 'localhost',
   user: process.env.MYSQL_USER || 'root',
   password: process.env.MYSQL_PASSWORD || '',
-  database: process.env.MYSQL_DATABASE || 'test_db',
+  database: process.env.MYSQL_DATABASE || 'bloomery_db',
   port: process.env.MYSQL_PORT ? Number(process.env.MYSQL_PORT) : 3306,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
 });
 
-// Test connection
-db.getConnection()
-  .then((conn) => {
-    console.log('Connected to MySQL database!');
+// Test DB connection on startup
+(async () => {
+  try {
+    const conn = await db.getConnection();
+    console.log('✅ Connected to MySQL database!');
     conn.release();
-  })
-  .catch((err) => console.error('MySQL connection error:', err));
+  } catch (err) {
+    console.error('❌ MySQL connection error:', err.message);
+    process.exit(1); // Stop server if DB cannot connect
+  }
+})();
 
-// API Routes
+// Example API route
 app.get('/api/data', async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT * FROM users'); // Example table
+    const [rows] = await db.query('SELECT * FROM users');
     res.json({ message: "Hello from Express backend!", data: rows });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: error.message });
+  } catch (err) {
+    console.error('Error fetching data:', err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 
-// Serve Vite build in production
+// Serve frontend in production
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, 'dist')));
   app.get('*', (req, res) => {
@@ -51,6 +55,7 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
+// Start server
 app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
